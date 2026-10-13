@@ -6,19 +6,26 @@ from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-# ---------- تنظیم مسیر templates به صورت absolute ----------
+# ---------- مسیر absolute برای templates ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+
+# چک کردن وجود پوشه templates
+if not os.path.exists(TEMPLATES_DIR):
+    os.makedirs(TEMPLATES_DIR)
+
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 app = FastAPI(title="ابر پنل میویی پاسارگارد")
 
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin"
 SUPPORT_ID = "@meov2ray"
+DB_PATH = os.path.join(BASE_DIR, "panel.db")
 
 # ---------- دیتابیس ----------
 def init_db():
-    conn = sqlite3.connect(os.path.join(BASE_DIR, "panel.db"))
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -38,7 +45,7 @@ def init_db():
 init_db()
 
 def get_db():
-    conn = sqlite3.connect(os.path.join(BASE_DIR, "panel.db"))
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 

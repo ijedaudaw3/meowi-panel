@@ -4,24 +4,16 @@ import sqlite3
 from datetime import datetime, timedelta
 from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 
-# ---------- مسیر absolute برای templates ----------
+# ---------- تنظیمات ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-
-# چک کردن وجود پوشه templates
-if not os.path.exists(TEMPLATES_DIR):
-    os.makedirs(TEMPLATES_DIR)
-
-templates = Jinja2Templates(directory=TEMPLATES_DIR)
-
-app = FastAPI(title="ابر پنل میویی پاسارگارد")
+DB_PATH = os.path.join(BASE_DIR, "panel.db")
 
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin"
 SUPPORT_ID = "@meov2ray"
-DB_PATH = os.path.join(BASE_DIR, "panel.db")
+
+app = FastAPI(title="ابر پنل میویی پاسارگارد")
 
 # ---------- دیتابیس ----------
 def init_db():
@@ -49,15 +41,145 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# ---------- صفحه اصلی ----------
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "support": SUPPORT_ID
-    })
+# ---------- HTML ها به صورت رشته ----------
+def page_index():
+    return f"""
+    <!DOCTYPE html>
+    <html lang="fa" dir="rtl">
+    <head><meta charset="UTF-8"><title>ابر پنل میویی پاسارگارد</title>
+    <style>
+        body {{ font-family: Tahoma; background:#111; color:#eee; text-align:center; padding:50px; }}
+        h1 {{ color:#ff4444; }}
+        a {{ color:#4fc3f7; text-decoration:none; margin:0 10px; }}
+        .box {{ background:#222; padding:30px; border-radius:15px; max-width:500px; margin:auto; }}
+        input {{ padding:10px; margin:5px; width:80%; border-radius:8px; border:none; }}
+        button {{ padding:10px 30px; background:#ff4444; color:white; border:none; border-radius:8px; cursor:pointer; }}
+    </style></head><body>
+    <div class="box">
+        <h1>🔥 ابر پنل میویی پاسارگارد</h1>
+        <p>بهترین پنل کانفیگ با کیفیت بالا</p>
+        <a href="/login">ورود</a> | <a href="/register-page">ثبت‌نام</a>
+        <hr><p>پشتیبانی: {SUPPORT_ID}</p>
+    </div></body></html>
+    """
 
-# ---------- ثبت‌نام ----------
+def page_login():
+    return f"""
+    <!DOCTYPE html>
+    <html lang="fa" dir="rtl">
+    <head><meta charset="UTF-8"><title>ورود</title>
+    <style>
+        body {{ font-family: Tahoma; background:#111; color:#eee; text-align:center; padding:50px; }}
+        .box {{ background:#222; padding:30px; border-radius:15px; max-width:400px; margin:auto; }}
+        input {{ padding:10px; margin:5px; width:80%; border-radius:8px; border:none; }}
+        button {{ padding:10px 30px; background:#ff4444; color:white; border:none; border-radius:8px; cursor:pointer; }}
+        a {{ color:#4fc3f7; }}
+    </style></head><body>
+    <div class="box"><h2>ورود به پنل</h2>
+        <form action="/login" method="post">
+            <input name="username" placeholder="یوزرنیم" required><br>
+            <input name="password" type="password" placeholder="رمز" required><br>
+            <button type="submit">ورود</button>
+        </form><br>
+        <a href="/register-page">ثبت‌نام</a> | <a href="/">بازگشت</a>
+        <p>پشتیبانی: {SUPPORT_ID}</p>
+    </div></body></html>
+    """
+
+def page_register():
+    return f"""
+    <!DOCTYPE html>
+    <html lang="fa" dir="rtl">
+    <head><meta charset="UTF-8"><title>ثبت‌نام</title>
+    <style>
+        body {{ font-family: Tahoma; background:#111; color:#eee; text-align:center; padding:50px; }}
+        .box {{ background:#222; padding:30px; border-radius:15px; max-width:400px; margin:auto; }}
+        input {{ padding:10px; margin:5px; width:80%; border-radius:8px; border:none; }}
+        button {{ padding:10px 30px; background:#ff4444; color:white; border:none; border-radius:8px; cursor:pointer; }}
+        a {{ color:#4fc3f7; }}
+    </style></head><body>
+    <div class="box"><h2>ثبت‌نام</h2>
+        <form action="/register" method="post">
+            <input name="username" placeholder="یوزرنیم" required><br>
+            <input name="password" type="password" placeholder="رمز" required><br>
+            <button type="submit">ثبت‌نام</button>
+        </form><br>
+        <a href="/login">ورود</a> | <a href="/">بازگشت</a>
+        <p>پشتیبانی: {SUPPORT_ID}</p>
+    </div></body></html>
+    """
+
+def page_dashboard(user, config):
+    return f"""
+    <!DOCTYPE html>
+    <html lang="fa" dir="rtl">
+    <head><meta charset="UTF-8"><title>داشبورد</title>
+    <style>
+        body {{ font-family: Tahoma; background:#111; color:#eee; text-align:center; padding:30px; }}
+        .box {{ background:#222; padding:25px; border-radius:15px; max-width:600px; margin:auto; }}
+        .config {{ background:#000; padding:15px; border-radius:8px; word-break:break-all; direction:ltr; text-align:left; }}
+        .info {{ display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #333; }}
+        a {{ color:#4fc3f7; }}
+    </style></head><body>
+    <div class="box">
+        <h2>👤 {user['username']}</h2>
+        <div class="info"><span>حجم کل:</span><span>{user['data_limit'] // 1024**3} GB</span></div>
+        <div class="info"><span>مصرف شده:</span><span>{user['used'] // 1024**3} GB</span></div>
+        <div class="info"><span>انقضا:</span><span>{user['expire_at']}</span></div>
+        <hr><h3>کانفیگ شما:</h3>
+        <div class="config">{config}</div><br>
+        <a href="/">بازگشت</a>
+        <p>پشتیبانی: {SUPPORT_ID}</p>
+    </div></body></html>
+    """
+
+def page_admin(users):
+    rows = ""
+    for u in users:
+        rows += f"""
+        <tr>
+            <td>{u['id']}</td>
+            <td>{u['username']}</td>
+            <td>{u['uuid'][:8]}...</td>
+            <td>{u['data_limit'] // 1024**3} GB</td>
+            <td>{u['used'] // 1024**3} GB</td>
+            <td>{u['expire_at']}</td>
+        </tr>
+        """
+    return f"""
+    <!DOCTYPE html>
+    <html lang="fa" dir="rtl">
+    <head><meta charset="UTF-8"><title>پنل ادمین</title>
+    <style>
+        body {{ font-family: Tahoma; background:#111; color:#eee; padding:30px; }}
+        table {{ width:100%; border-collapse:collapse; background:#222; }}
+        th, td {{ padding:10px; border:1px solid #333; text-align:center; }}
+        th {{ background:#ff4444; }}
+        a {{ color:#4fc3f7; }}
+    </style></head><body>
+    <h1>👑 پنل ادمین</h1>
+    <table>
+        <tr><th>ID</th><th>یوزرنیم</th><th>UUID</th><th>حجم کل</th><th>مصرف</th><th>انقضا</th></tr>
+        {rows}
+    </table><br>
+    <a href="/">بازگشت به صفحه اصلی</a>
+    <p>پشتیبانی: {SUPPORT_ID}</p>
+    </body></html>
+    """
+
+# ---------- Routes ----------
+@app.get("/", response_class=HTMLResponse)
+async def home():
+    return page_index()
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page():
+    return page_login()
+
+@app.get("/register-page", response_class=HTMLResponse)
+async def register_page():
+    return page_register()
+
 @app.post("/register")
 async def register(username: str = Form(...), password: str = Form(...)):
     conn = get_db()
@@ -72,14 +194,9 @@ async def register(username: str = Form(...), password: str = Form(...)):
         conn.commit()
     except sqlite3.IntegrityError:
         conn.close()
-        raise HTTPException(status_code=400, detail="این یوزرنیم قبلا گرفته شده")
+        return HTMLResponse("<h3>این یوزرنیم قبلا گرفته شده</h3><a href='/register-page'>بازگشت</a>", status_code=400)
     conn.close()
     return RedirectResponse("/login", status_code=303)
-
-# ---------- صفحه ورود ----------
-@app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
 
 @app.post("/login")
 async def login(username: str = Form(...), password: str = Form(...)):
@@ -92,41 +209,28 @@ async def login(username: str = Form(...), password: str = Form(...)):
     conn.close()
     if user:
         return RedirectResponse(f"/dashboard/{user['username']}", status_code=303)
-    raise HTTPException(status_code=401, detail="یوزرنیم یا رمز اشتباهه")
+    return HTMLResponse("<h3>یوزرنیم یا رمز اشتباهه</h3><a href='/login'>بازگشت</a>", status_code=401)
 
-# ---------- داشبورد کاربر ----------
 @app.get("/dashboard/{username}", response_class=HTMLResponse)
-async def dashboard(request: Request, username: str):
+async def dashboard(username: str):
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT * FROM users WHERE username = ?", (username,))
     user = c.fetchone()
     conn.close()
     if not user:
-        raise HTTPException(status_code=404, detail="کاربر پیدا نشد")
-    
+        return HTMLResponse("<h3>کاربر پیدا نشد</h3><a href='/'>بازگشت</a>", status_code=404)
     config_link = f"vless://{user['uuid']}@your-server:443?type=ws&security=tls#Meowi-{user['username']}"
-    
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "user": user,
-        "config": config_link,
-        "support": SUPPORT_ID
-    })
+    return page_dashboard(user, config_link)
 
-# ---------- پنل ادمین ----------
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_panel(request: Request):
+async def admin_panel():
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT * FROM users ORDER BY id DESC")
     users = c.fetchall()
     conn.close()
-    return templates.TemplateResponse("admin.html", {
-        "request": request,
-        "users": users,
-        "support": SUPPORT_ID
-    })
+    return page_admin(users)
 
 if __name__ == "__main__":
     import uvicorn

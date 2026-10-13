@@ -2,20 +2,23 @@ import os
 import uuid
 import sqlite3
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Request, Form, Depends, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+# ---------- تنظیم مسیر templates به صورت absolute ----------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
 app = FastAPI(title="ابر پنل میویی پاسارگارد")
-templates = Jinja2Templates(directory="templates")
 
 ADMIN_USER = "admin"
-ADMIN_PASS = "admin"  # بعدا عوض کن
+ADMIN_PASS = "admin"
 SUPPORT_ID = "@meov2ray"
 
 # ---------- دیتابیس ----------
 def init_db():
-    conn = sqlite3.connect("panel.db")
+    conn = sqlite3.connect(os.path.join(BASE_DIR, "panel.db"))
     c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -35,7 +38,7 @@ def init_db():
 init_db()
 
 def get_db():
-    conn = sqlite3.connect("panel.db")
+    conn = sqlite3.connect(os.path.join(BASE_DIR, "panel.db"))
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -95,7 +98,6 @@ async def dashboard(request: Request, username: str):
     if not user:
         raise HTTPException(status_code=404, detail="کاربر پیدا نشد")
     
-    # اینجا بعدا کانفیگ واقعی ساخته میشه
     config_link = f"vless://{user['uuid']}@your-server:443?type=ws&security=tls#Meowi-{user['username']}"
     
     return templates.TemplateResponse("dashboard.html", {

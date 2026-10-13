@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>داشبورد</title>
+    <style>
+        body { font-family: Tahoma; background: #111; color: #eee; text-align: center; padding: 30px; }
+        .box { background: #222; padding: 25px; border-radius: 15px; max-width: 600px; margin: auto; }
+        .config { background: #000; padding: 15px; border-radius: 8px; word-break: break-all; direction: ltr; text-align: left; }
+        .info { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #333; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>👤 {{ user['username'] }}</h2>
+        <div class="info"><span>حجم کل:</span><span>{{ user['data_limit'] // 1024**3 }} GB</span></div>
+        <div class="info"><span>مصرف شده:</span><span>{{ user['used'] // 1024**3 }} GB</span></div>
+        <div class="info"><span>انقضا:</span><span>{{ user['expire_at'] }}</span></div>
+        <hr>
+        <h3>کانفیگ شما:</h3>
+        <div class="config">{{ config }}</div>
+        <br>
+        <p>پشتیبانی: {{ support }}</p>
+    </div>
+</body>
+</html>
